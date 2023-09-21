@@ -16,7 +16,7 @@ export class MonitorController {
             return this.firebase.firestore.collection('intances').doc(message.instance).set({...message, timestampRegister: Date.now(), status: 'active'});
         } else if (message.type === 'shutdown') {
             const instance = this.firebase.firestore.collection('intances').doc(message.instance);
-            return instance.update({state: true});
+            return instance.update({status: 'down'});
         } else {
             return this.firebase.firestore.collection('monitor').add({...message, timestampRegister: Date.now()});
         }

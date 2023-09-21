@@ -7,7 +7,7 @@ import {FirebaseModule} from "nestjs-firebase";
 @Module({
   imports: [
       FirebaseModule.forRoot({
-    googleApplicationCredential: "proyecto-final-xcloud-firebase-adminsdk-yni8p-48600f3b4e.json",
+    googleApplicationCredential: "credential.json",
   }),
     MonitorModule],
   controllers: [AppController],
