@@ -6,7 +6,7 @@ import {FirebaseAdmin, InjectFirebaseAdmin} from "nestjs-firebase";
 export class MonitorTask {
     constructor(@InjectFirebaseAdmin() private readonly firebase: FirebaseAdmin) {
     }
-    @Cron('*/30 * * * * *')
+    @Cron('*/15 * * * * *')
     async handleCron() {
         const instancesRef = this.firebase.firestore.collection('intances');
         const serviceRef = this.firebase.firestore.collection('services');
@@ -23,37 +23,20 @@ export class MonitorTask {
                 return health;
             });
             const results = await Promise.all(docs);
-            let availability = results.reduce((a, b) => a + b.availability, 0);
-            console.log('eval==========>',availability, results.length)
-            if (availability == 0) {
-                await serviceRef.add({service: 'micro-evaluaciones', availability: 0, timestampRegister: new Date(), healthData: results, initDate, endDate});
-            } else if (availability < 0) {
-                await serviceRef.add({service: 'micro-evaluaciones', availability: -1, timestampRegister: new Date(), healthData: results, initDate, endDate});
-            } else{
-                availability = availability/ results.length;
-                if (availability > 0.9) {
-                    await serviceRef.add({service: 'micro-evaluaciones', availability: 1, timestampRegister: new Date(), healthData: results, initDate, endDate});
-                } else if (availability > 0.7) {
-                    await serviceRef.add({service: 'micro-evaluaciones', availability: 0, timestampRegister: new Date(), healthData: results, initDate, endDate});
-                } else {
-                    await serviceRef.add({service: 'micro-evaluaciones', availability: -1, timestampRegister: new Date(), healthData: results, initDate, endDate});
-                }
-            }
+            let availability = results.reduce((a, b) => a + b.availability, 0)/results.length;
+
+            await serviceRef.add({service: 'micro-evaluaciones', availability, timestampRegister: new Date(), healthData: results, initDate, endDate});
         }
     }
     async getStatusInstance(instance: any, initDate, endDate) {
         const healthRef = this.firebase.firestore.collection('monitor');
-        const snapshot = await healthRef.where('instance', "==", instance).orderBy('timestampRegister', 'desc').where('timestampRegister', '>', initDate).where('timestampRegister', '<', endDate).get();
+        const snapshot = await healthRef.where('instance', "==", instance).where('time', '>', initDate).where('time', '<', endDate).get();
         const data = snapshot.docs.map((doc) => doc.data());
+        console.log(data, initDate, endDate, instance)
         const errorHealth = data.filter((item) => item.health === 'down');
-        const instanceAvailability = 1 - (errorHealth.length / data.length);
-        if (instanceAvailability > 0.9) {
-            return { availability: 1, data};
-        } else if (instanceAvailability > 0.7) {
-            return { availability: 0, data};
-        } else {
-            return { availability: -1, data};
-        }
+        console.log(data.length, errorHealth.length)
+        const instanceAvailability = (data.length - errorHealth.length) / data.length;
+        return { availability: instanceAvailability, data};
     }
 
 }

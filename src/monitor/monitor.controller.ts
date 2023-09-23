@@ -12,14 +12,13 @@ export class MonitorController {
         const message = JSON.parse(Buffer.from(body.message.data, 'base64').toString(
             'utf-8'
         ));
-        console.log(message)
         if (message.type === 'inscription') {
-            return this.firebase.firestore.collection('intances').doc(message.instance).set({...message, timestampRegister: Date.now(), status: 'active'});
+            return this.firebase.firestore.collection('intances').doc(message.instance).set({...message, timestampRegister: new Date(), time: new Date(message.time),status: 'active'});
         } else if (message.type === 'shutdown') {
             const instance = this.firebase.firestore.collection('intances').doc(message.instance);
             return instance.update({status: 'down'});
         } else {
-            return this.firebase.firestore.collection('monitor').add({...message, timestampRegister: Date.now()});
+            return this.firebase.firestore.collection('monitor').add({...message, timestampRegister: new Date(), time: new Date(message.time)});
         }
     }
 
