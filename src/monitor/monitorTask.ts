@@ -45,7 +45,7 @@ export class MonitorTask {
         const healthRef = this.firebase.firestore.collection('monitor');
         const snapshot = await healthRef.where('instance', "==", instance).orderBy('timestampRegister', 'desc').where('timestampRegister', '>', initDate).where('timestampRegister', '<', endDate).get();
         const data = snapshot.docs.map((doc) => doc.data());
-        const errorHealth = data.filter((item) => item.type === 'error');
+        const errorHealth = data.filter((item) => item.health === 'down');
         const instanceAvailability = 1 - (errorHealth.length / data.length);
         if (instanceAvailability > 0.9) {
             return { availability: 1, data};
