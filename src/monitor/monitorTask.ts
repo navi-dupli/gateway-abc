@@ -11,23 +11,32 @@ export class MonitorTask {
         const instancesRef = this.firebase.firestore.collection('intances');
         const serviceRef = this.firebase.firestore.collection('services');
         const snapshot = await instancesRef.where('status', "==", 'active').get();
-        const docs = snapshot.docs.map(async (doc) => {
-            const instanceData = doc.data();
-            const health = await this.getStatusInstance(instanceData.instance);
-            await instancesRef.doc(doc.id).update({
-                health: health.availability, instance: instanceData.instance, timestampRegister: new Date()
+        if (snapshot.size) {
+            const docs = snapshot.docs.map(async (doc) => {
+                const instanceData = doc.data();
+                const health = await this.getStatusInstance(instanceData.instance);
+                await instancesRef.doc(doc.id).update({
+                    health: health.availability, instance: instanceData.instance, timestampRegister: new Date()
+                });
+                return health;
             });
-            return health;
-        });
-        const results = await Promise.all(docs);
-        let availability = results.reduce((a, b) => a + b.availability, 0);
-        availability = availability > 0 ?  availability/ results.length : 0;
-        if (availability > 0.9) {
-            await serviceRef.add({service: 'micro-evaluaciones', availability: 1, timestampRegister: new Date(), healthData: results});
-        } else if (availability > 0.7) {
-            await serviceRef.add({service: 'micro-evaluaciones', availability: 0, timestampRegister: new Date(), healthData: results});
-        } else {
-            await serviceRef.add({service: 'micro-evaluaciones', availability: -1, timestampRegister: new Date(), healthData: results});
+            const results = await Promise.all(docs);
+            let availability = results.reduce((a, b) => a + b.availability, 0);
+            console.log('eval==========>',availability, results.length)
+            if (availability == 0) {
+                await serviceRef.add({service: 'micro-evaluaciones', availability: 0, timestampRegister: new Date(), healthData: results});
+            } else if (availability < 0) {
+                await serviceRef.add({service: 'micro-evaluaciones', availability: -1, timestampRegister: new Date(), healthData: results});
+            } else{
+                availability = availability/ results.length;
+                if (availability > 0.9) {
+                    await serviceRef.add({service: 'micro-evaluaciones', availability: 1, timestampRegister: new Date(), healthData: results});
+                } else if (availability > 0.7) {
+                    await serviceRef.add({service: 'micro-evaluaciones', availability: 0, timestampRegister: new Date(), healthData: results});
+                } else {
+                    await serviceRef.add({service: 'micro-evaluaciones', availability: -1, timestampRegister: new Date(), healthData: results});
+                }
+            }
         }
     }
     async getStatusInstance(instance: any) {
